@@ -1,0 +1,5 @@
+# directory with images
+images/*
+
+# .csv containing filename and true label
+true_labels.csv
