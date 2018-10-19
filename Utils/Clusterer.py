@@ -5,13 +5,16 @@ import csv
 import numpy as np
 from sklearn.cluster import KMeans, AgglomerativeClustering, MiniBatchKMeans, MeanShift, AffinityPropagation, Birch, DBSCAN
 from sklearn.metrics import normalized_mutual_info_score as nmi
-from Metrics.purity import purity
+from Metrics.purity import purity, confusion_matrix
+
+from matplotlib import pyplot as plt
 
 
 class Clusterer:
     def __init__(self, dataset, cnn_architecture, layer, clustering_algorithm, n_classes=0):
         self.dataset_path = os.path.join('.', 'data', dataset)
         self.dataset_feat_path = os.path.join(self.dataset_path, 'features', str('%s_%s' % (cnn_architecture, layer)))
+        self.dataset_feature_map_path = os.path.join(self.dataset_path, 'feature_maps', str('%s_%s' % (cnn_architecture, layer)))
 
         self.dataset_feature_names = os.listdir(self.dataset_feat_path)
         self.n_files = len(self.dataset_feature_names)
@@ -69,6 +72,20 @@ class Clusterer:
             self.features.append(pickle.load(file))
             file.close()
         self.features = np.array(self.features)
+
+    def plot_features(self):
+        if not os.path.exists(self.dataset_feature_map_path):
+            os.makedirs(self.dataset_feature_map_path)
+
+        print("saving feature maps to image files ... ")
+
+        for im in range(self.n_files):
+            if im % 100 == 0:
+                print("    %d/%d" % (im, self.n_files))
+            features_reshaped = np.reshape(self.features[im], (int(np.sqrt(self.features[im].shape)), -1))
+            feature_map_filename = str("%s.png" % os.path.splitext(self.dataset_feature_names[im])[0])
+            plt.imshow(features_reshaped, interpolation='nearest')
+            plt.savefig(os.path.join(self.dataset_feature_map_path, feature_map_filename))
     
     def cluster(self):
         print("Clustering ...")
@@ -85,8 +102,13 @@ class Clusterer:
             print("NMI: %f" % nmi(true_labels, self.predicted_labels))
         elif metric == "purity":
             print("Purity: %f" % purity(true_labels, self.predicted_labels))
-        elif metric == "both":
+        elif metric == "confusion matrix":
+            print("Confusion matrix:")
+            print(confusion_matrix(true_labels, self.predicted_labels))
+        elif metric == "all":
             print("NMI: %f" % nmi(true_labels, self.predicted_labels))
             print("Purity: %f" % purity(true_labels, self.predicted_labels))
+            print("Confusion matrix:")
+            print(confusion_matrix(true_labels, self.predicted_labels))
         else:
             print("Error: This metric is not available. Choose among the following options: 'nmi', 'purity', 'both'")
